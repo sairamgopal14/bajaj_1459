@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>21BRS1459</title>
+    <style>
+        #error {
+            color: red;
+        }
+        #checkbox-container {
+            display: none;
+        }
+    </style>    
+</head>
+<body>
+    <h1>Enter Data</h1>
+    <form id="dataForm">
+        <label for="data">Enter data (JSON format):</label><br>
+        <textarea id="data" name="data" rows="4" cols="50" required></textarea><br><br>
+        <button type="submit">Submit</button>
+    </form>
+    <p id="error"></p>
+    <div id="checkbox-container">
+        <label>Select data to display:</label><br>
+        <input type="checkbox" id="showAlphabets" value="alphabets">
+        <label for="showAlphabets">Alphabets</label><br>
+        <input type="checkbox" id="showNumbers" value="numbers">
+        <label for="showNumbers">Numbers</label><br>
+        <input type="checkbox" id="showHighestAlphabet" value="highest_alphabet">
+        <label for="showHighestAlphabet">Highest Alphabet</label><br><br>
+    </div>
+    <pre id="response"></pre>
+
+    <script>
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            let inputData = document.getElementById('data').value;
+
+            try {
+                // Parse the input data as JSON
+                let parsedData = JSON.parse(inputData);
+
+                // Validate JSON format (should contain a key 'data' with an array)
+                if (!parsedData.data || !Array.isArray(parsedData.data)) {
+                    throw new Error('Invalid JSON format. Expected an object with a "data" key containing an array.');
+                }
+
+                // Clear previous error message
+                document.getElementById('error').textContent = '';
+
+                // Send POST request to the backend
+                fetch('/bfhl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: parsedData.data })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Store the response data
+                    window.responseData = data;
+
+                    // Show the checkbox container
+                    document.getElementById('checkbox-container').style.display = 'block';
+
+                    // Clear previous response
+                    document.getElementById('response').textContent = '';
+
+                    // Trigger the display of data based on selected checkboxes
+                    updateResponse();
+                })
+                .catch(error => {
+                    document.getElementById('error').textContent = 'Error: ' + error.message;
+                });
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+            }
+        });
+
+        // Function to update response based on selected checkboxes
+        function updateResponse() {
+            let selectedOptions = Array.from(document.querySelectorAll('#checkbox-container input[type="checkbox"]:checked')).map(checkbox => checkbox.value);
+            let responseText = '';
+
+            // Build responseText based on selected options
+            if (selectedOptions.includes('alphabets') && window.responseData.alphabets.length > 0) {
+                responseText += `Alphabets: ${JSON.stringify(window.responseData.alphabets)}\n`;
+            }
+            if (selectedOptions.includes('numbers') && window.responseData.numbers.length > 0) {
+                responseText += `Numbers: ${JSON.stringify(window.responseData.numbers)}\n`;
+            }
+            if (selectedOptions.includes('highest_alphabet') && window.responseData.highest_alphabet.length > 0) {
+                responseText += `Highest Alphabet: ${JSON.stringify(window.responseData.highest_alphabet)}\n`;
+            }
+
+            document.getElementById('response').textContent = responseText || ' ';
+        }
+
+        // Add event listeners to checkboxes to update data automatically
+        document.querySelectorAll('#checkbox-container input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateResponse);
+        });
+    </script>
+</body>
+</html>
